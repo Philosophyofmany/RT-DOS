@@ -1,51 +1,52 @@
-# Compiler and assembler
-CC = gcc
-AS = nasm
+# Directory structure
+BUILD_DIR = src/build
+SRC_DIR = src
+
+# Tools
+NASM = nasm
+GCC = gcc
 LD = ld
+MKFS_FAT = mkfs.fat
+DD = dd
 
-# Directories
-OBJDIR = build
-SRCDIR = src
-INCDIR = include
-BOOTDIR = boot
-KERNELDIR = kernel
-OUTPUTDIR = .
+# File names
+BOOTLOADER_SRC = $(SRC_DIR)/boot/bootloader.asm
+KERNEL_SRC = $(SRC_DIR)/kernel/kernel.asm
+KERNEL_C_SRC = $(SRC_DIR)/kernel/kernel.c
+KERNEL_OBJ = $(BUILD_DIR)/kernel.o
+KERNEL_C_OBJ = $(BUILD_DIR)/kernel_c.o
+BOOTLOADER_BIN = $(BUILD_DIR)/bootloader.bin
+KERNEL_BIN = $(BUILD_DIR)/kernel.bin
+FLP_IMG = $(BUILD_DIR)/main_floppy.img
 
-# Files
-BOOTLOADER = $(BOOTDIR)/bootloader.asm
-KERNEL_ENTRY = $(BOOTDIR)/kernel_entry.asm
-KERNEL_C = $(KERNELDIR)/kernel.c
+# Build bootloader and kernel
+all: $(FLP_IMG)
 
-# Output
-OUTPUT = $(OUTPUTDIR)/os_image
-BOOT_IMG = $(BOOTDIR)/boot.img
+$(BOOTLOADER_BIN): $(BOOTLOADER_SRC)
+	$(NASM) -f bin -o $(BOOTLOADER_BIN) $(BOOTLOADER_SRC)
 
-# Linker flags to disable executable stack
-LD_FLAGS = -z noexecstack
+$(KERNEL_OBJ): $(KERNEL_SRC)
+	$(NASM) -f elf32 -o $(KERNEL_OBJ) $(KERNEL_SRC)
 
-# Compile and link the bootloader
-$(OBJDIR)/bootloader.o: $(BOOTLOADER)
-	$(AS) -f elf32 $(BOOTLOADER) -o $(OBJDIR)/bootloader.o
+$(KERNEL_C_OBJ): $(KERNEL_C_SRC)
+	$(GCC) -ffreestanding -nostdlib -m32 -Wall -Wextra -c $(KERNEL_C_SRC) -o $(KERNEL_C_OBJ)
 
-$(OBJDIR)/kernel_entry.o: $(KERNEL_ENTRY)
-	$(AS) -f elf32 $(KERNEL_ENTRY) -o $(OBJDIR)/kernel_entry.o
+$(KERNEL_BIN): $(KERNEL_OBJ) $(KERNEL_C_OBJ)
+	$(LD) -m elf_i386 -T $(SRC_DIR)/kernel/kernel.ld -o $(KERNEL_BIN) $(KERNEL_OBJ) $(KERNEL_C_OBJ)
 
-$(OBJDIR)/kernel.o: $(KERNEL_C)
-	$(CC) -m32 -ffreestanding -c $(KERNEL_C) -o $(OBJDIR)/kernel.o
+$(FLP_IMG): $(BOOTLOADER_BIN) $(KERNEL_BIN)
+	# Remove old floppy image if it exists
+	rm -f $(FLP_IMG)
 
-# Link the kernel and bootloader
-$(OUTPUT): $(OBJDIR)/bootloader.o $(OBJDIR)/kernel_entry.o $(OBJDIR)/kernel.o
-	$(LD) $(LD_FLAGS) -m elf_i386 -o $(OUTPUT) $(OBJDIR)/bootloader.o $(OBJDIR)/kernel_entry.o $(OBJDIR)/kernel.o -T tools/linker.ld
+	# Create an empty floppy image with 2880 sectors (1.44MB floppy)
+	$(DD) if=/dev/zero of=$(FLP_IMG) bs=512 count=2880
 
-# Build the bootable image
-build: $(OUTPUT)
-	# Ensure the boot.img file is clean or created
-	@echo "Creating bootable image..."
-	dd if=$(OUTPUT) of=$(BOOT_IMG) bs=512 seek=4
+	# Format the image as FAT12
+	$(MKFS_FAT) -F 12 -n "NBOS" $(FLP_IMG)
 
-# Clean up
+	# Copy the bootloader and kernel into the floppy image
+	$(DD) if=$(BOOTLOADER_BIN) of=$(FLP_IMG) conv=notrunc bs=512 seek=0
+	$(DD) if=$(KERNEL_BIN) of=$(FLP_IMG) conv=notrunc bs=512 seek=4
+
 clean:
-	@echo "Cleaning up..."
-	rm -rf $(OBJDIR)/*.o $(OUTPUT) $(BOOT_IMG)
-
-.PHONY: build clean
+	rm -f $(BOOTLOADER_BIN) $(KERNEL_BIN) $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(FLP_IMG)
