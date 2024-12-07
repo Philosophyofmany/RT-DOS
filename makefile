@@ -1,5 +1,3 @@
-# Makefile
-
 # Compiler and assembler
 CC = gcc
 AS = nasm
@@ -9,14 +7,21 @@ LD = ld
 OBJDIR = build
 SRCDIR = src
 INCDIR = include
+BOOTDIR = boot
+KERNELDIR = kernel
+OUTPUTDIR = .
 
 # Files
-BOOTLOADER = boot/bootloader.asm
-KERNEL_ENTRY = boot/kernel_entry.asm
-KERNEL_C = kernel/kernel.c
+BOOTLOADER = $(BOOTDIR)/bootloader.asm
+KERNEL_ENTRY = $(BOOTDIR)/kernel_entry.asm
+KERNEL_C = $(KERNELDIR)/kernel.c
 
 # Output
-OUTPUT = os_image
+OUTPUT = $(OUTPUTDIR)/os_image
+BOOT_IMG = $(BOOTDIR)/boot.img
+
+# Linker flags to disable executable stack
+LD_FLAGS = -z noexecstack
 
 # Compile and link the bootloader
 $(OBJDIR)/bootloader.o: $(BOOTLOADER)
@@ -30,12 +35,17 @@ $(OBJDIR)/kernel.o: $(KERNEL_C)
 
 # Link the kernel and bootloader
 $(OUTPUT): $(OBJDIR)/bootloader.o $(OBJDIR)/kernel_entry.o $(OBJDIR)/kernel.o
-	$(LD) -m elf_i386 -o $(OUTPUT) $(OBJDIR)/bootloader.o $(OBJDIR)/kernel_entry.o $(OBJDIR)/kernel.o -T tools/linker.ld
+	$(LD) $(LD_FLAGS) -m elf_i386 -o $(OUTPUT) $(OBJDIR)/bootloader.o $(OBJDIR)/kernel_entry.o $(OBJDIR)/kernel.o -T tools/linker.ld
 
-# Build the bootable image (optional)
+# Build the bootable image
 build: $(OUTPUT)
-	dd if=$(OUTPUT) of=boot/boot.img bs=512 seek=4
+	# Ensure the boot.img file is clean or created
+	@echo "Creating bootable image..."
+	dd if=$(OUTPUT) of=$(BOOT_IMG) bs=512 seek=4
 
 # Clean up
 clean:
-	rm -rf $(OBJDIR)/*.o $(OUTPUT)
+	@echo "Cleaning up..."
+	rm -rf $(OBJDIR)/*.o $(OUTPUT) $(BOOT_IMG)
+
+.PHONY: build clean
