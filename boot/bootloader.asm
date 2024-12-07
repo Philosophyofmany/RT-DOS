@@ -12,6 +12,10 @@ section .text
 _start:
     cli                 ; Disable interrupts
 
+    ; Debug: Print a message to the screen
+    lea esi, [debug_msg]    ; Load address of the debug message
+    call print_string       ; Call the print string function
+
     ; Set up Global Descriptor Table
     lgdt [gdt_descriptor]
 
@@ -64,6 +68,25 @@ kernel_entry:
     ; Halt if kernel returns
     cli
     hlt
+
+; Debug message string
+section .data
+debug_msg db 'Bootloader started...', 0
+
+; Function to print a string to the screen using BIOS interrupt 0x10
+print_string:
+    ; Print characters one by one
+    .print_char:
+        mov al, [esi]         ; Load character into AL
+        test al, al           ; Check if we reached null terminator (0)
+        jz .done              ; If zero, we're done
+        mov ah, 0x0E          ; BIOS teletype output function
+        int 0x10              ; Call BIOS interrupt
+        inc esi               ; Move to the next character
+        jmp .print_char       ; Repeat the process
+
+    .done:
+        ret
 
 ; Pad to ensure correct size
 times 510-($-$$) db 0

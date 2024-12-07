@@ -7,8 +7,7 @@ MEMORY {
     STACK (rw) : ORIGIN = 0x4000000, LENGTH = 2M /* Read/Write region for stack */
 }
 
-SECTIONS
-{
+SECTIONS {
     /* Set the base address of the program */
     . = 1M;
 
@@ -40,5 +39,8 @@ SECTIONS
         *(.rodata)       /* All read-only data sections */
     } > CODE            /* Place this section in the 'CODE' memory region */
 
-    /* Additional sections can be added as needed */
+    /* Optional custom section for kernel entry code */
+    .kernel : {
+        *(.kernel_entry)  /* Ensure kernel entry code is placed in its own section */
+    } > CODE
 }
