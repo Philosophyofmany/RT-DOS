@@ -1,5 +1,3 @@
-# Makefile for Multiboot Kernel with GRUB
-
 # Compiler and linker settings
 CC = gcc
 LD = ld
@@ -14,7 +12,7 @@ KERNEL_BIN = kernel.bin
 ISO = mykernel.iso
 
 # Source files
-SOURCES = boot.o kernel.o
+SOURCES = boot.o kernel.o screen.o
 
 # Default target
 all: $(ISO)
@@ -27,8 +25,12 @@ $(KERNEL_BIN): $(SOURCES) linker.ld
 boot.o: boot.s
 	$(NASM) -f elf32 $< -o $@
 
-# Compile C kernel
-kernel.o: kernel.c
+# Compile kernel.c
+kernel.o: kernel.c screen.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile screen.c
+screen.o: screen.c screen.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Create bootable ISO
