@@ -1,52 +1,47 @@
-# Directory structure
-BUILD_DIR = src/build
-SRC_DIR = src
+# Makefile for Multiboot Kernel with GRUB
 
-# Tools
-NASM = nasm
-GCC = gcc
+# Compiler and linker settings
+CC = gcc
 LD = ld
-MKFS_FAT = mkfs.fat
-DD = dd
+NASM = nasm
 
-# File names
-BOOTLOADER_SRC = $(SRC_DIR)/boot/bootloader.asm
-KERNEL_SRC = $(SRC_DIR)/kernel/kernel.asm
-KERNEL_C_SRC = $(SRC_DIR)/kernel/kernel.c
-KERNEL_OBJ = $(BUILD_DIR)/kernel.o
-KERNEL_C_OBJ = $(BUILD_DIR)/kernel_c.o
-BOOTLOADER_BIN = $(BUILD_DIR)/bootloader.bin
-KERNEL_BIN = $(BUILD_DIR)/kernel.bin
-FLP_IMG = $(BUILD_DIR)/main_floppy.img
+# Compiler flags
+CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector -nostartfiles -nodefaultlibs -Wall -Wextra
+LDFLAGS = -m elf_i386
 
-# Build bootloader and kernel
-all: $(FLP_IMG)
+# Output files
+KERNEL_BIN = kernel.bin
+ISO = mykernel.iso
 
-$(BOOTLOADER_BIN): $(BOOTLOADER_SRC)
-	$(NASM) -f bin -o $(BOOTLOADER_BIN) $(BOOTLOADER_SRC)
+# Source files
+SOURCES = boot.o kernel.o
 
-$(KERNEL_OBJ): $(KERNEL_SRC)
-	$(NASM) -f elf32 -o $(KERNEL_OBJ) $(KERNEL_SRC)
+# Default target
+all: $(ISO)
 
-$(KERNEL_C_OBJ): $(KERNEL_C_SRC)
-	$(GCC) -ffreestanding -nostdlib -m32 -Wall -Wextra -c $(KERNEL_C_SRC) -o $(KERNEL_C_OBJ)
+# Link the kernel
+$(KERNEL_BIN): $(SOURCES) linker.ld
+	$(LD) $(LDFLAGS) -T linker.ld -o $@ $(SOURCES)
 
-$(KERNEL_BIN): $(KERNEL_OBJ) $(KERNEL_C_OBJ)
-	$(LD) -m elf_i386 -T $(SRC_DIR)/kernel/kernel.ld -o $(KERNEL_BIN) $(KERNEL_OBJ) $(KERNEL_C_OBJ)
+# Compile assembly file
+boot.o: boot.s
+	$(NASM) -f elf32 $< -o $@
 
-$(FLP_IMG): $(BOOTLOADER_BIN) $(KERNEL_BIN)
-	# Remove old floppy image if it exists
-	rm -f $(FLP_IMG)
+# Compile C kernel
+kernel.o: kernel.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-	# Create an empty floppy image with 2880 sectors (1.44MB floppy)
-	$(DD) if=/dev/zero of=$(FLP_IMG) bs=512 count=2880
+# Create bootable ISO
+$(ISO): $(KERNEL_BIN) grub.cfg
+	mkdir -p iso/boot/grub
+	cp $(KERNEL_BIN) iso/boot/
+	cp grub.cfg iso/boot/grub/grub.cfg
+	grub-mkrescue -o $(ISO) iso
 
-	# Format the image as FAT12
-	$(MKFS_FAT) -F 12 -n "NBOS" $(FLP_IMG)
-
-	# Copy the bootloader and kernel into the floppy image
-	$(DD) if=$(BOOTLOADER_BIN) of=$(FLP_IMG) conv=notrunc bs=512 seek=0
-	$(DD) if=$(KERNEL_BIN) of=$(FLP_IMG) conv=notrunc bs=512 seek=4
-
+# Clean up
 clean:
-	rm -f $(BOOTLOADER_BIN) $(KERNEL_BIN) $(KERNEL_OBJ) $(KERNEL_C_OBJ) $(FLP_IMG)
+	rm -rf *.o $(KERNEL_BIN) $(ISO) iso
+
+# QEMU run target
+run: $(ISO)
+	qemu-system-i386 -cdrom $(ISO)
