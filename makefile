@@ -19,7 +19,7 @@ KERNEL_BIN = kernel.bin
 ISO = mykernel.iso
 
 # Source files
-SOURCES = boot.o kernel.o screen.o shell.o keyboard.o interrupt.o
+SOURCES = bootloader/boot.o kernel/kernel.o kernel/screen/screen.o kernel/shell/shell.o kernel/keyboard/keyboard.o kernel/interrupts/interrupt.o newlib/syscalls.o
 
 # Default target
 all: $(ISO)
@@ -28,35 +28,39 @@ all: $(ISO)
 $(KERNEL_BIN): $(SOURCES) linker.ld
 	$(LD) $(LDFLAGS) -o $@ $(SOURCES)
 
-# Compile assembly file
-boot.o: boot.s
+# Compile assembly files
+bootloader/boot.o: bootloader/boot.s
 	$(NASM) -f elf64 $< -o $@
 
-# Compile C kernel
-kernel.o: kernel.c
+# Compile C kernel files
+kernel/kernel.o: kernel/kernel.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile C screen
-screen.o: screen.c
+kernel/screen/screen.o: kernel/screen/screen.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile C shell
-shell.o: shell.c
+kernel/shell/shell.o: kernel/shell/shell.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile C keyboard
-keyboard.o: keyboard.c
+kernel/keyboard/keyboard.o: kernel/keyboard/keyboard.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile interrupt handling functions
-interrupt.o: interrupt.c
+kernel/interrupts/interrupt.o: kernel/interrupts/interrupt.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile syscalls for newlib
+newlib/syscalls.o: newlib/syscalls.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Create bootable ISO
-$(ISO): $(KERNEL_BIN) grub.cfg
+$(ISO): $(KERNEL_BIN) bootloader/grub.cfg
 	mkdir -p iso/boot/grub
 	cp $(KERNEL_BIN) iso/boot/
-	cp grub.cfg iso/boot/grub/grub.cfg
+	cp bootloader/grub.cfg iso/boot/grub/grub.cfg
 	grub-mkrescue -o $(ISO) iso
 
 # Clean up

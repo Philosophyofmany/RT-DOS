@@ -1,6 +1,3 @@
-#include "screen.h"
-#include "shell.h"
-#include "interrupt.h"
 
 #define VIDEO_MEMORY 0xB8000  // VGA video memory address for text mode
 #define SCREEN_WIDTH 80       // 80 columns in text mode
@@ -19,22 +16,10 @@ void print_string(const char* str) {
 }
 
 void kernel_main() {
-    // Step 1: Clear the screen
-    // buffer_clear();
-
-    // Step 2: Draw a title box (or any additional UI element you want at startup)
-    // draw_box(25, 1, 30, 3, "RT-DOS Experimental Kernel");
-
-    // Step 3: Initialize the shell
-    // init_shell();
-
-    // // Step 4: Start the shell's input loop
-    // shell_input();
-
-    // Step 5: Print "I'm your kernel" directly to the screen
+    // Step 1: Print "I'm your kernel" directly to the screen
     print_string("I'm your kernel");
 
-    // Step 6: Infinite loop to keep the kernel running
+    // Step 2: Infinite loop to keep the kernel running
     while (1) {
         // You can add more functionality here if needed
     }

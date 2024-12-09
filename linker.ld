@@ -30,5 +30,5 @@ SECTIONS {
     }
 
     /* End of kernel */
-    end = .;
+    _end = .;
 }
