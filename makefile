@@ -19,7 +19,7 @@ KERNEL_BIN = kernel.bin
 ISO = mykernel.iso
 
 # Source files
-SOURCES = bootloader/boot.o kernel/kernel.o kernel/screen/screen.o kernel/shell/shell.o kernel/keyboard/keyboard.o kernel/interrupts/interrupt.o newlib/syscalls.o
+SOURCES = bootloader/boot.o kernel/kernel.o kernel/screen/screen.o kernel/shell/shell.o kernel/keyboard/keyboard.o kernel/interrupts/interrupt.o kernel/interrupts/isr.o newlib/syscalls.o
 
 # Default target
 all: $(ISO)
@@ -45,11 +45,15 @@ kernel/shell/shell.o: kernel/shell/shell.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile C keyboard
-kernel/keyboard/keyboard.o: kernel/keyboard/keyboard.c
+kernel/keyboard/keyboard.o: kernel/keyboard/keyboard.c kernel/keyboard_map.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile interrupt handling functions
 kernel/interrupts/interrupt.o: kernel/interrupts/interrupt.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile ISR functions
+kernel/interrupts/isr.o: kernel/interrupts/isr.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Compile syscalls for newlib

@@ -1,4 +1,3 @@
-
 SECTIONS {
     /* Kernel starts at 1MB memory location */
     . = 0x100000;
